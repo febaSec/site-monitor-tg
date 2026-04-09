@@ -2,38 +2,15 @@
 set -euo pipefail
 
 # Enable config
-source sentinel.conf
-
+source ./src/sentinel.conf
+source ./src/dependencies.sh
+source ./src/tg_notify.sh
+source ./src/colors.sh
 # Trap for errors
 trap 'echo "[ERROR] Script failed at line $LINENO" >> "$LOG_FILE"' ERR
 
-# Commands check
-for cmd in curl jq; do
-	command -v "$cmd" >/dev/null 2>&1 || { echo "Error: $cmd not found"; exit 1; }
-done
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m' # No Color
-
-# Log and telegram notify function
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://api.telegram.org/bot$TG_TOKEN/getMe")
-if [[ "$HTTP_CODE" != "200" ]]; then
-    echo "[ERROR ] API connection failed (HTTP $HTTP_CODE)" >> "$LOG_FILE"
-    exit 150
-fi
-
-if ! curl -s -X POST "https://api.telegram.org/bot$TG_TOKEN/getMe" | jq -e ".ok" >/dev/null 2>&1; then
-	echo "[ERROR] The chat can't be achived" >> "$LOG_FILE"
-fi
-
-function tg_notify() {
-    local message="$1"
-    curl -s -X POST "https://api.telegram.org/bot$TG_TOKEN/sendMessage" \
-         --data-urlencode "chat_id=$CHAT_ID" \
-         --data-urlencode "text=$message" >/dev/null
-}
+# Dependencies
+dependencies
 
 # URLS array check
 echo -e "${GREEN}Sentinel-TG monitoring started...${NC}"
